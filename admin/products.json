@@ -1,0 +1,38 @@
+[
+    {
+      "id": 1,
+      "name": "Умная лампа",
+      "price": 29.99,
+      "description": "LED-лампа с Wi-Fi и управлением через приложение",
+      "categories": ["Electronics"]
+    },
+    {
+      "id": 2,
+      "name": "Наушники Bluetooth",
+      "price": 59.99,
+      "description": "Беспроводные наушники с шумоподавлением",
+      "categories": ["Electronics", "Audio"]
+    },
+    {
+      "id": 3,
+      "name": "Рубашка хлопковая",
+      "price": 19.99,
+      "description": "Мужская рубашка классического кроя",
+      "categories": ["Clothing"]
+    },
+    {
+      "id": 4,
+      "name": "Книга «Современный JavaScript»",
+      "price": 39.99,
+      "description": "Полное руководство по современному JS",
+      "categories": ["Books"]
+    },
+    {
+      "id": 5,
+      "name": "Фитнес-браслет",
+      "price": 49.99,
+      "description": "Монитор сердечного ритма и шагомер",
+      "categories": ["Electronics", "Fitness"]
+    }
+  ]
+  

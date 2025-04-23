@@ -1,0 +1,16 @@
+type Product {
+  id: ID!
+  name: String!
+  price: Float!
+  description: String!
+  categories: [String!]!
+}
+
+type Query {
+  # возвращает все товары
+  products: [Product!]!
+}
+
+schema {
+  query: Query
+}

@@ -1,0 +1,102 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+      "title": "Shop Admin API",
+      "version": "1.0.0",
+      "description": "API для добавления, редактирования и удаления товаров"
+    },
+    "paths": {
+      "/products": {
+        "get": {
+          "summary": "Получить все товары",
+          "responses": {
+            "200": { "description": "Список товаров" }
+          }
+        },
+        "post": {
+          "summary": "Добавить товар(ы)",
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    { "$ref": "#/components/schemas/Product" },
+                    {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Product" }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": { "description": "Товар(ы) добавлен(ы)" }
+          }
+        }
+      },
+      "/products/{id}": {
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "put": {
+          "summary": "Редактировать товар",
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ProductUpdate" }
+              }
+            }
+          },
+          "responses": {
+            "200": { "description": "Товар обновлен" },
+            "404": { "description": "Товар не найден" }
+          }
+        },
+        "delete": {
+          "summary": "Удалить товар",
+          "responses": {
+            "204": { "description": "Товар удален" },
+            "404": { "description": "Товар не найден" }
+          }
+        }
+      }
+    },
+    "components": {
+      "schemas": {
+        "Product": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string" },
+            "price": { "type": "number" },
+            "description": { "type": "string" },
+            "categories": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          },
+          "required": ["name", "price", "description", "categories"]
+        },
+        "ProductUpdate": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string" },
+            "price": { "type": "number" },
+            "description": { "type": "string" },
+            "categories": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+  

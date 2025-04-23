@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Админ-панель</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    section { margin-bottom: 30px; }
+    label { display: block; margin-top: 10px; }
+    input[type="text"],
+    input[type="number"],
+    textarea { width: 300px; }
+    button { margin-top: 10px; }
+    #messages { height: 150px; overflow-y: auto; border: 1px solid #ccc; padding: 5px; }
+    #product-list { list-style: none; padding: 0; }
+    #product-list li { margin-bottom: 5px; }
+    .result { margin-top: 10px; color: green; }
+    .error { color: red; }
+  </style>
+</head>
+<body>
+  <h1>Админ-панель</h1>
+
+  <section id="create">
+    <h2>Добавить товар</h2>
+    <form id="create-form">
+      <label>Название:
+        <input type="text" id="create-name" required />
+      </label>
+      <label>Цена:
+        <input type="number" id="create-price" step="0.01" required />
+      </label>
+      <label>Описание:
+        <textarea id="create-description" rows="3" required></textarea>
+      </label>
+      <label>Категории (через запятую):
+        <input type="text" id="create-categories" />
+      </label>
+      <button type="submit">Добавить</button>
+    </form>
+    <div id="create-result" class="result"></div>
+  </section>
+
+  <section id="update">
+    <h2>Редактировать товар</h2>
+    <form id="update-form">
+      <label>ID:
+        <input type="number" id="update-id" required />
+      </label>
+      <label>Название:
+        <input type="text" id="update-name" />
+      </label>
+      <label>Цена:
+        <input type="number" id="update-price" step="0.01" />
+      </label>
+      <label>Описание:
+        <textarea id="update-description" rows="3"></textarea>
+      </label>
+      <label>Категории (через запятую):
+        <input type="text" id="update-categories" />
+      </label>
+      <button type="submit">Обновить</button>
+    </form>
+    <div id="update-result" class="result"></div>
+  </section>
+
+  <section id="delete">
+    <h2>Удалить товар</h2>
+    <form id="delete-form">
+      <label>ID:
+        <input type="number" id="delete-id" required />
+      </label>
+      <button type="submit">Удалить</button>
+    </form>
+    <div id="delete-result" class="result"></div>
+  </section>
+
+  <section id="list">
+    <h2>Список товаров</h2>
+    <button id="refresh-list">Обновить список</button>
+    <ul id="product-list"></ul>
+  </section>
+
+  <hr/>
+
+  <section id="chat">
+    <h2>Чат поддержки</h2>
+    <div id="messages"></div>
+    <input id="chat-input" placeholder="Сообщение…" />
+    <button id="chat-send">Отправить</button>
+  </section>
+
+  <script>
+    const apiUrl = '/products';
+
+    function showResult(elemId, msg, isError = false) {
+      const el = document.getElementById(elemId);
+      el.textContent = msg;
+      el.className = isError ? 'error' : 'result';
+    }
+
+    // Добавление товара
+    document.getElementById('create-form').addEventListener('submit', e => {
+      e.preventDefault();
+      const data = {
+        name: document.getElementById('create-name').value,
+        price: parseFloat(document.getElementById('create-price').value),
+        description: document.getElementById('create-description').value,
+        categories: document
+          .getElementById('create-categories')
+          .value.split(',')
+          .map(s => s.trim())
+          .filter(s => s)
+      };
+      fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      })
+      .then(res => res.json())
+      .then(json => {
+        showResult('create-result', 'Товар добавлен: ' + JSON.stringify(json));
+        refreshList();
+      })
+      .catch(err => showResult('create-result', 'Ошибка: ' + err.message, true));
+    });
+
+    // Редактирование товара
+    document.getElementById('update-form').addEventListener('submit', e => {
+      e.preventDefault();
+      const id = document.getElementById('update-id').value;
+      const payload = {};
+      const name = document.getElementById('update-name').value;
+      if (name) payload.name = name;
+      const priceVal = document.getElementById('update-price').value;
+      if (priceVal) payload.price = parseFloat(priceVal);
+      const desc = document.getElementById('update-description').value;
+      if (desc) payload.description = desc;
+      const cats = document.getElementById('update-categories').value;
+      if (cats) payload.categories = cats.split(',').map(s => s.trim()).filter(s => s);
+      fetch(`${apiUrl}/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      .then(res => {
+        if (res.ok) return res.json();
+        throw new Error('HTTP ' + res.status);
+      })
+      .then(json => {
+        showResult('update-result', 'Товар обновлен: ' + JSON.stringify(json));
+        refreshList();
+      })
+      .catch(err => showResult('update-result', 'Ошибка: ' + err.message, true));
+    });
+
+    // Удаление товара
+    document.getElementById('delete-form').addEventListener('submit', e => {
+      e.preventDefault();
+      const id = document.getElementById('delete-id').value;
+      fetch(`${apiUrl}/${id}`, { method: 'DELETE' })
+      .then(res => {
+        if (res.status === 204) {
+          showResult('delete-result', 'Товар удален');
+          refreshList();
+        } else {
+          throw new Error('HTTP ' + res.status);
+        }
+      })
+      .catch(err => showResult('delete-result', 'Ошибка: ' + err.message, true));
+    });
+
+    // Обновление списка товаров
+    function refreshList() {
+      fetch(apiUrl)
+      .then(res => res.json())
+      .then(products => {
+        const ul = document.getElementById('product-list');
+        ul.innerHTML = '';
+        products.forEach(p => {
+          const li = document.createElement('li');
+          li.textContent = `${p.id}: ${p.name} ($${p.price})`;
+          ul.appendChild(li);
+        });
+      })
+      .catch(err => console.error('Ошибка при получении списка:', err));
+    }
+    document.getElementById('refresh-list').addEventListener('click', refreshList);
+    refreshList();
+
+    // WebSocket-чат
+    const ws = new WebSocket('ws://localhost:4000');
+    const msgs = document.getElementById('messages');
+    ws.onmessage = ev => {
+      const { sender, text } = JSON.parse(ev.data);
+      const div = document.createElement('div');
+      div.textContent = `${sender}: ${text}`;
+      msgs.appendChild(div);
+      msgs.scrollTop = msgs.scrollHeight;
+    };
+    document.getElementById('chat-send').addEventListener('click', () => {
+      const input = document.getElementById('chat-input');
+      const msg = { sender: 'Админ', text: input.value };
+      ws.send(JSON.stringify(msg));
+      input.value = '';
+    });
+  </script>
+</body>
+</html>
