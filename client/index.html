@@ -53,8 +53,8 @@
     });
 
     // ------ WebSocket-чат ------
-    console.log('Пытаюсь подключиться к ws://localhost:4000');
-    const ws = new WebSocket('ws://localhost:4000');
+    console.log('Пытаюсь подключиться к ws://localhost:4050');
+    const ws = new WebSocket('ws://localhost:4050');
     const msgContainer = document.getElementById('messages');
 
     ws.onopen = () => console.log('WebSocket: соединение открыто');

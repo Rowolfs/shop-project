@@ -93,7 +93,7 @@
   <script>
     // WebSocket-чат для администратора
     console.log('--- Admin chat script loaded ---');
-    const ws = new WebSocket('ws://localhost:4000');
+    const ws = new WebSocket('ws://localhost:4050');
     const msgContainer = document.getElementById('messages');
 
     ws.onopen = () => console.log('Admin WS: соединение открыто');
