@@ -1,41 +1,75 @@
 const express = require('express');
-const path = require('path');
+const bodyParser = require('body-parser');
 const fs = require('fs');
-const { buildSchema } = require('graphql');
-const { graphqlHTTP } = require('express-graphql');
+const path = require('path');
+const swaggerUi = require('swagger-ui-express');
+const swaggerDocument = require('./swagger.json');
 
 const app = express();
-const PORT = 3000;
+const PORT = 8080;
+const DATA_FILE = path.join(__dirname, 'products.json');
 
-// 1) Статика
-app.use(express.static(__dirname));
+// Раздаём статические файлы админки из public
+app.use(express.static(path.join(__dirname, 'public')));
 
-// 2) GraphQL-схема из SDL
-const schema = buildSchema(
-  fs.readFileSync(path.join(__dirname, 'schema.graphql'), 'utf8')
-);
+// Парсим JSON тело запросов
+app.use(bodyParser.json());
 
-// 3) Резолверы
-const rootValue = {
-  products: () =>
-    JSON.parse(fs.readFileSync(path.join(__dirname, 'products.json'), 'utf8')),
-};
+// Swagger UI по /docs
+app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
-// 4) Подключаем GraphQL
-app.use(
-  '/graphql',
-  graphqlHTTP({
-    schema,
-    rootValue,
-    graphiql: true,
-  })
-);
-
-// 5) Оставляем корень для index.html
+// Главная страница админки
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.listen(PORT, () =>
-  console.log(`Client listening at http://localhost:${PORT}`)
-);
+// Функции чтения/записи
+function readData() {
+  return JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
+}
+function writeData(data) {
+  fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+}
+
+// Получить все товары
+app.get('/products', (req, res) => {
+  res.json(readData());
+});
+
+// Добавить товар(ы)
+app.post('/products', (req, res) => {
+  const items = Array.isArray(req.body) ? req.body : [req.body];
+  const data = readData();
+  let maxId = data.reduce((m, i) => (i.id > m ? i.id : m), 0);
+  items.forEach(item => {
+    item.id = ++maxId;
+    data.push(item);
+  });
+  writeData(data);
+  res.status(201).json(items);
+});
+
+// Обновить товар по ID
+app.put('/products/:id', (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const data = readData();
+  const idx = data.findIndex(i => i.id === id);
+  if (idx === -1) return res.sendStatus(404);
+  data[idx] = { ...data[idx], ...req.body, id };
+  writeData(data);
+  res.json(data[idx]);
+});
+
+// Удалить товар по ID
+app.delete('/products/:id', (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  let data = readData();
+  if (!data.find(i => i.id === id)) return res.sendStatus(404);
+  data = data.filter(i => i.id !== id);
+  writeData(data);
+  res.sendStatus(204);
+});
+
+app.listen(PORT, () => {
+  console.log(`Admin panel listening at http://localhost:${PORT}`);
+});

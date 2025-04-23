@@ -1,6 +1,6 @@
 const WebSocket = require('ws');
 
-const wss = new WebSocket.Server({ port: 4000 }, () =>
+const wss = new WebSocket.Server({ port: 4050 }, () =>
   console.log('WebSocket chat on ws://localhost:4000')
 );
 

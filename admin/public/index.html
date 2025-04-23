@@ -91,116 +91,49 @@
   </section>
 
   <script>
-    const apiUrl = '/products';
-
-    function showResult(elemId, msg, isError = false) {
-      const el = document.getElementById(elemId);
-      el.textContent = msg;
-      el.className = isError ? 'error' : 'result';
-    }
-
-    // Добавление товара
-    document.getElementById('create-form').addEventListener('submit', e => {
-      e.preventDefault();
-      const data = {
-        name: document.getElementById('create-name').value,
-        price: parseFloat(document.getElementById('create-price').value),
-        description: document.getElementById('create-description').value,
-        categories: document
-          .getElementById('create-categories')
-          .value.split(',')
-          .map(s => s.trim())
-          .filter(s => s)
-      };
-      fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      })
-      .then(res => res.json())
-      .then(json => {
-        showResult('create-result', 'Товар добавлен: ' + JSON.stringify(json));
-        refreshList();
-      })
-      .catch(err => showResult('create-result', 'Ошибка: ' + err.message, true));
-    });
-
-    // Редактирование товара
-    document.getElementById('update-form').addEventListener('submit', e => {
-      e.preventDefault();
-      const id = document.getElementById('update-id').value;
-      const payload = {};
-      const name = document.getElementById('update-name').value;
-      if (name) payload.name = name;
-      const priceVal = document.getElementById('update-price').value;
-      if (priceVal) payload.price = parseFloat(priceVal);
-      const desc = document.getElementById('update-description').value;
-      if (desc) payload.description = desc;
-      const cats = document.getElementById('update-categories').value;
-      if (cats) payload.categories = cats.split(',').map(s => s.trim()).filter(s => s);
-      fetch(`${apiUrl}/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      })
-      .then(res => {
-        if (res.ok) return res.json();
-        throw new Error('HTTP ' + res.status);
-      })
-      .then(json => {
-        showResult('update-result', 'Товар обновлен: ' + JSON.stringify(json));
-        refreshList();
-      })
-      .catch(err => showResult('update-result', 'Ошибка: ' + err.message, true));
-    });
-
-    // Удаление товара
-    document.getElementById('delete-form').addEventListener('submit', e => {
-      e.preventDefault();
-      const id = document.getElementById('delete-id').value;
-      fetch(`${apiUrl}/${id}`, { method: 'DELETE' })
-      .then(res => {
-        if (res.status === 204) {
-          showResult('delete-result', 'Товар удален');
-          refreshList();
-        } else {
-          throw new Error('HTTP ' + res.status);
-        }
-      })
-      .catch(err => showResult('delete-result', 'Ошибка: ' + err.message, true));
-    });
-
-    // Обновление списка товаров
-    function refreshList() {
-      fetch(apiUrl)
-      .then(res => res.json())
-      .then(products => {
-        const ul = document.getElementById('product-list');
-        ul.innerHTML = '';
-        products.forEach(p => {
-          const li = document.createElement('li');
-          li.textContent = `${p.id}: ${p.name} ($${p.price})`;
-          ul.appendChild(li);
-        });
-      })
-      .catch(err => console.error('Ошибка при получении списка:', err));
-    }
-    document.getElementById('refresh-list').addEventListener('click', refreshList);
-    refreshList();
-
-    // WebSocket-чат
+    // WebSocket-чат для администратора
+    console.log('--- Admin chat script loaded ---');
     const ws = new WebSocket('ws://localhost:4000');
-    const msgs = document.getElementById('messages');
-    ws.onmessage = ev => {
-      const { sender, text } = JSON.parse(ev.data);
-      const div = document.createElement('div');
-      div.textContent = `${sender}: ${text}`;
-      msgs.appendChild(div);
-      msgs.scrollTop = msgs.scrollHeight;
+    const msgContainer = document.getElementById('messages');
+
+    ws.onopen = () => console.log('Admin WS: соединение открыто');
+    ws.onerror = err => console.error('Admin WS: ошибка подключения', err);
+    ws.onclose = () => console.log('Admin WS: соединение закрыто');
+
+    ws.onmessage = async ev => {
+      console.log('Admin WS: raw data', ev.data);
+      let dataStr;
+      if (typeof ev.data === 'string') {
+        dataStr = ev.data;
+      } else if (ev.data instanceof Blob) {
+        dataStr = await ev.data.text();
+      } else {
+        console.warn('Admin WS: неизвестный тип', ev.data);
+        return;
+      }
+      console.log('Admin WS: сообщение строка', dataStr);
+      let msg;
+      try {
+        msg = JSON.parse(dataStr);
+      } catch(e) {
+        console.error('Admin: не смог распарсить JSON:', dataStr, e);
+        return;
+      }
+      const el = document.createElement('div');
+      el.textContent = `${msg.sender}: ${msg.text}`;
+      msgContainer.appendChild(el);
+      msgContainer.scrollTop = msgContainer.scrollHeight;
     };
+
     document.getElementById('chat-send').addEventListener('click', () => {
       const input = document.getElementById('chat-input');
-      const msg = { sender: 'Админ', text: input.value };
+      const text = input.value.trim();
+      if (!text) {
+        console.warn('Admin: пустое сообщение');
+        return;
+      }
+      const msg = { sender: 'Админ', text };
+      console.log('Admin: отправляю через WS:', msg);
       ws.send(JSON.stringify(msg));
       input.value = '';
     });

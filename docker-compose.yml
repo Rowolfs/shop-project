@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile.client
+    ports:
+      - '3000:3000'
+    depends_on:
+      - ws
+
+  admin:
+    build:
+      context: ./admin
+      dockerfile: Dockerfile.admin
+    ports:
+      - '8080:8080'
+    depends_on:
+      - ws
+
+  ws:
+    build:
+      context: ./ws
+      dockerfile: Dockerfile.ws
+    ports:
+      - '4050:4050'
