@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <title>Каталог товаров (GraphQL)</title>
+  <title>Каталог товаров</title>
   <style>
     body { font-family: Arial; padding: 20px; }
     #cards { display: flex; flex-wrap: wrap; gap: 10px; }
@@ -13,96 +13,81 @@
     #chat-send { width: 80px; }
   </style>
 </head>
-<body>
-  <h1>Каталог товаров (GraphQL)</h1>
-  <div id="cards">Загрузка карточек…</div>
+  <body>
+    <h1>Каталог товаров</h1>
+    <div id="cards">Загрузка карточек…</div>
 
-  <div id="chat">
-    <h2>Чат поддержки</h2>
-    <div id="messages"></div>
-    <input id="chat-input" placeholder="Сообщение…" />
-    <button id="chat-send">Отправить</button>
-  </div>
+    <div id="chat">
+      <h2>Чат поддержки</h2>
+      <div id="messages"></div>
+      <input id="chat-input" placeholder="Сообщение…" />
+      <button id="chat-send">Отправить</button>
+    </div>
+  </body>
+
 
   <script>
-    console.log('--- Page script loaded ---');
+    const API_URL = 'http://localhost:8080';
 
-    // ------ GraphQL-запрос: только name и price ------
-    const query = `{ products { name price } }`;
-    fetch('/graphql', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query })
-    })
-    .then(res => res.json())
-    .then(({ data }) => {
-      console.log('GraphQL: получены товары', data.products);
-      const cards = document.getElementById('cards');
-      cards.innerHTML = '';
-      data.products.forEach(p => {
-        const el = document.createElement('div');
-        el.className = 'card';
-        el.innerHTML = `<h3>${p.name}</h3><p>Цена: $${p.price}</p>`;
-        cards.appendChild(el);
-      });
-    })
-    .catch(e => {
-      console.error('GraphQL fetch error', e);
-      document.getElementById('cards').innerText =
-        'Ошибка загрузки GraphQL: ' + e.message;
-    });
-
-    // ------ WebSocket-чат ------
-    console.log('Пытаюсь подключиться к ws://localhost:4050');
-    const ws = new WebSocket('ws://localhost:4050');
-    const msgContainer = document.getElementById('messages');
-
-    ws.onopen = () => console.log('WebSocket: соединение открыто');
-    ws.onerror = err => console.error('WebSocket: ошибка подключения', err);
-    ws.onclose = () => console.log('WebSocket: соединение закрыто');
-
-    ws.onmessage = async ev => {
-      console.log('WebSocket: пришло сиро данные', ev.data);
-      let dataStr;
-      if (typeof ev.data === 'string') {
-        dataStr = ev.data;
-      } else if (ev.data instanceof Blob) {
+    document.addEventListener('DOMContentLoaded', () => {
+      // 1) Загрузка и рендер карточек
+      async function loadProducts() {
         try {
-          dataStr = await ev.data.text();
-        } catch(err) {
-          console.error('Ошибка чтения blob из WS:', err);
-          return;
+          const res = await fetch(`${API_URL}/products`);
+          if (!res.ok) throw new Error(`Ошибка ${res.status}`);
+          const products = await res.json();
+          const cards = document.getElementById('cards');
+          cards.innerHTML = '';
+          products.forEach(p => {
+            const el = document.createElement('div');
+            el.className = 'card';
+            el.innerHTML = `
+              <h3>${p.name}</h3>
+              <p>Цена: ₽${p.price.toFixed(2)}</p>
+            `;
+            cards.appendChild(el);
+          });
+        } catch (err) {
+          console.error('REST fetch error', err);
+          document.getElementById('cards').textContent =
+            'Ошибка загрузки товаров: ' + err.message;
         }
-      } else {
-        console.warn('WS: неизвестный тип данных', ev.data);
-        return;
       }
-      console.log('WebSocket: пришло сообщение', dataStr);
-      let msg;
-      try {
-        msg = JSON.parse(dataStr);
-      } catch(e) {
-        console.error('Не смог распарсить JSON из WS:', dataStr, e);
-        return;
-      }
-      const d = document.createElement('div');
-      d.textContent = `${msg.sender}: ${msg.text}`;
-      msgContainer.appendChild(d);
-      msgContainer.scrollTop = msgContainer.scrollHeight;
-    };
 
-    document.getElementById('chat-send').addEventListener('click', () => {
-      const input = document.getElementById('chat-input');
-      const text = input.value.trim();
-      if (!text) {
-        console.warn('Пустое сообщение, не отправляю');
-        return;
-      }
-      const msg = { sender: 'Покупатель', text };
-      console.log('Отправляю через WS:', msg);
-      ws.send(JSON.stringify(msg));
-      input.value = '';
+      loadProducts();  
+      // (если требуется кнопка «Обновить», навесьте на неё тоже loadProducts)
+
+      // 2) WebSocket-чат (ваш код без изменений)
+      console.log('Пытаюсь подключиться к ws://localhost:4050');
+      const ws = new WebSocket('ws://localhost:4050');
+      const msgContainer = document.getElementById('messages');
+      ws.onopen    = () => console.log('WebSocket открыт');
+      ws.onerror   = e => console.error('WS ошибка', e);
+      ws.onclose   = () => console.log('WebSocket закрыт');
+      ws.onmessage = async ev => {
+        let dataStr = typeof ev.data === 'string'
+          ? ev.data
+          : ev.data instanceof Blob
+            ? await ev.data.text()
+            : null;
+        if (!dataStr) return;
+        let msg;
+        try { msg = JSON.parse(dataStr); }
+        catch(e) { return console.error('Неправильный JSON:', e); }
+        const d = document.createElement('div');
+        d.textContent = `${msg.sender}: ${msg.text}`;
+        msgContainer.appendChild(d);
+        msgContainer.scrollTop = msgContainer.scrollHeight;
+      };
+      document.getElementById('chat-send')
+        .addEventListener('click', () => {
+          const input = document.getElementById('chat-input');
+          const text = input.value.trim();
+          if (!text) return;
+          ws.send(JSON.stringify({ sender: 'Покупатель', text }));
+          input.value = '';
+        });
     });
   </script>
-</body>
+
 </html>

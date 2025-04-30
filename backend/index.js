@@ -1,9 +1,12 @@
-const express = require('express');
+
 const bodyParser = require('body-parser');
 const fs = require('fs');
 const path = require('path');
 const swaggerUi = require('swagger-ui-express');
 const swaggerDocument = require('./swagger.json');
+const express = require('express');
+const cors    = require('cors');
+
 
 const app = express();
 const PORT = 8080;
@@ -13,6 +16,7 @@ const DATA_FILE = path.join(__dirname, 'products.json');
 // Раздаём статические файлы админки из public
 app.use(express.static(path.join(__dirname, 'public')));
 
+app.use(cors());
 // Парсим JSON тело запросов
 app.use(bodyParser.json());
 

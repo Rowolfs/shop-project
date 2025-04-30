@@ -2,11 +2,10 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const fs = require('fs');
 const path = require('path');
-const swaggerUi = require('swagger-ui-express');
-const swaggerDocument = require('./swagger.json');
+
 
 const app = express();
-const PORT = 8080;
+const PORT = 4000;
 const DATA_FILE = path.join(__dirname, 'products.json');
 
 
@@ -16,8 +15,6 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Парсим JSON тело запросов
 app.use(bodyParser.json());
 
-// Swagger UI по /docs
-app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 // Главная страница админки
 app.get('/', (req, res) => {

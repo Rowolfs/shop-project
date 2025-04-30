@@ -1,19 +1,16 @@
-# client/Dockerfile
 FROM node:18-alpine
 
 WORKDIR /app
 
-# Сначала копируем package.json и package-lock.json, чтобы закешировать npm install
-COPY package*.json ./
+# Скопировать package.json (и package-lock.json, если он появится)
+COPY package.json ./
 
-# Ставим зависимости (с --legacy-peer-deps для express-graphql)
-RUN npm install --legacy-peer-deps
+# Установить зависимости (install вместо ci, чтобы работало без lockfile)
+RUN npm install
 
-# Копируем весь остальной код
+# Теперь копируем всё остальное приложение
 COPY . .
 
-# Открываем порт, на котором слушает клиент
-EXPOSE 3000
+EXPOSE 8080
 
-# Команда запуска
 CMD ["npm", "start"]
